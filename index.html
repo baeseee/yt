@@ -4,49 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유튜브 플레이어</title>
-    <style>
-        /* 간단한 스타일링 */
-        .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 800px;
-            margin: 20px auto;
-        }
-        .list {
-            width: 200px;
-            border: 1px solid #ccc;
-            padding: 10px;
-        }
-        .player {
-            width: calc(100% - 220px);
-            height: 315px; /* 유튜브 비디오의 기본 높이 */
-            border: 1px solid #ccc;
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
-        <div class="list" id="playlist">
-            <!-- 여기에 목록이 동적으로 생성될 예정 -->
+        <div class="player-container" id="player-container">
+            <div class="player" id="player">
+                <!-- 여기에 유튜브 플레이어가 나올 예정 -->
+            </div>
         </div>
-        <div class="player" id="player">
-            <!-- 여기에 유튜브 플레이어가 나올 예정 -->
+        <div class="search-container">
+			<div class="search-options">
+				<select id="filterType">
+					<option value="all">전체</option>
+					<option value="무대">무대</option>
+					<option value="mv">MV</option>
+				</select>
+				<select id="searchType">
+					<option value="singer">가수</option>
+					<option value="title">제목</option>
+				</select>
+			</div>
+			<div class="search-input">
+				<input type="text" id="searchInput" placeholder="검색어 입력" onkeypress="handleKeyPress(event)">
+				<button onclick="performSearch()">검색</button>
+			</div>
+		</div>
+        <div class="list-container">
+            <div class="list" id="playlist">
+                <!-- 여기에 목록이 동적으로 생성될 예정 -->
+            </div>
         </div>
     </div>
 
+    <!-- YouTube API를 불러오기 위한 스크립트 -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="data/data.js"></script>
     <script>
-        // 데이터 파일(data.js)에서 데이터 가져오기
+        var player; // YouTube 플레이어 객체
 
         // 목록 생성 함수
         function generatePlaylist() {
             var playlist = document.getElementById('playlist');
             // 각 데이터 항목에 대해 목록 아이템 생성
-            datas.forEach(function(data) {
+            datas.forEach(function(data, index) {
                 var listItem = document.createElement('div');
-                listItem.textContent = data.title;
-                listItem.style.cursor = 'pointer';
+                listItem.className = 'list-item';
+                
+                var img = document.createElement('img');
+                img.src = 'poster/' + data.poster; // 이미지 경로 수정
+                img.alt = data.title;
+
+                var title = document.createElement('div');
+				title.className = 'title'; // 제목 요소에 클래스 추가
+				title.textContent = data.singer + ' - ' + data.title; // 가수와 제목을 결합하여 표시
+
+                listItem.appendChild(img);
+                listItem.appendChild(title);
                 listItem.addEventListener('click', function() {
                     loadVideo(data.vid);
                 });
@@ -56,8 +70,106 @@
 
         // 비디오 로드 함수
         function loadVideo(videoId) {
-            var playerDiv = document.getElementById('player');
-            playerDiv.innerHTML = '<iframe width="100%" height="100%" src="https://www.youtube.com/embed/' + videoId + '?autoplay=1" frameborder="0" allowfullscreen></iframe>';
+            if (player) {
+                player.loadVideoById(videoId);
+            } else {
+                player = new YT.Player('player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+					playerVars: {
+						'controls': 1,
+						'rel': 0, // 관련 동영상 보이지 않게 설정
+						'showinfo': 0,
+						'autoplay': 0
+					},
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+        }
+
+        // 플레이어 준비 완료 시 호출되는 함수
+        function onPlayerReady(event) {
+            event.target.playVideo();
+        }
+
+        // 플레이어 상태 변경 시 호출되는 함수
+        function onPlayerStateChange(event) {
+            if (event.data == YT.PlayerState.ENDED) {
+                playNextVideo();
+            }
+        }
+
+        // 다음 비디오 재생 함수
+        function playNextVideo() {
+            // 현재 재생 중인 비디오의 인덱스 찾기
+            var currentVideoIndex = datas.findIndex(function(data) {
+                return data.vid === player.getVideoData().video_id;
+            });
+
+            // 다음 비디오의 인덱스 계산
+            var nextVideoIndex = (currentVideoIndex + 1) % datas.length;
+
+            // 다음 비디오 로드 및 재생
+            loadVideo(datas[nextVideoIndex].vid);
+        }
+
+        // 검색 기능 함수
+        function performSearch() {
+            var searchInput = document.getElementById('searchInput').value.toLowerCase();
+            var searchType = document.getElementById('searchType').value;
+			var filterType = document.getElementById('filterType').value;
+            var filteredDatas = [];
+
+            // 검색어에 따라 데이터 필터링
+            if (searchType === 'singer') {
+                filteredDatas = datas.filter(function(data) {
+                    return data.singer.toLowerCase().includes(searchInput);
+                });
+            } else if (searchType === 'title') {
+                filteredDatas = datas.filter(function(data) {
+                    return data.title.toLowerCase().includes(searchInput);
+                });
+            }
+
+			// 추가적으로 필터링 조건 적용
+			if (filterType !== 'all') {
+				filteredDatas = filteredDatas.filter(function(data) {
+					return data.type.toLowerCase() === filterType;
+				});
+			}
+
+            // 검색 결과를 목록으로 출력
+            displaySearchResults(filteredDatas);
+        }
+
+        // 검색 결과 목록 출력 함수
+        function displaySearchResults(results) {
+            var playlist = document.getElementById('playlist');
+            playlist.innerHTML = ''; // 기존 목록 초기화
+
+            results.forEach(function(data) {
+                var listItem = document.createElement('div');
+                listItem.className = 'list-item';
+                
+                var img = document.createElement('img');
+                img.src = 'poster/' + data.poster; // 이미지 경로 수정
+                img.alt = data.title;
+
+                var title = document.createElement('div');
+                title.className = 'title'; // 제목 요소에 클래스 추가
+				title.textContent = data.singer + ' - ' + data.title; // 가수와 제목을 결합하여 표시
+
+                listItem.appendChild(img);
+                listItem.appendChild(title);
+                listItem.addEventListener('click', function() {
+                    loadVideo(data.vid);
+                });
+                playlist.appendChild(listItem);
+            });
         }
 
         // 초기화 함수
@@ -67,7 +179,23 @@
         }
 
         // 페이지 로드 시 초기화 함수 호출
-        window.onload = initialize;
+        window.onload = function() {
+            initialize();
+        };
+
+        // 엔터 키 처리 함수
+        function handleKeyPress(event) {
+            if (event.keyCode === 13) { // 엔터 키 코드는 13입니다.
+                performSearch(); // 검색 실행
+            }
+        }
+
+        // 창 크기 변경 시 플레이어 크기 조정 함수
+        window.onresize = function() {
+            if (player) {
+                player.setSize(document.getElementById('player-container').clientWidth, document.getElementById('player-container').clientHeight);
+            }
+        };
     </script>
 </body>
 </html>
