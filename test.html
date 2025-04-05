@@ -20,14 +20,13 @@
   </style>
 </head>
 <body>
-  <h2 style="text-align:center;">사용자 목록</h2>
+  <h2 style="text-align:center;">기본 지출 목록</h2>
   <table id="data-table">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>이름</th>
-        <th>나이</th>
-        <th>직업</th>
+        <th>항목</th>
+        <th>금액</th>
+        <th>필수</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -40,10 +39,9 @@
     data.forEach(item => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${item.id}</td>
-        <td>${item.name}</td>
-        <td>${item.age}</td>
-        <td>${item.job}</td>
+        <td>${item.col1}</td>
+        <td>${item.col2}</td>
+        <td>${item.col3}</td>
       `;
       tbody.appendChild(tr);
     });
