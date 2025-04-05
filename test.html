@@ -46,13 +46,13 @@
       tbody.appendChild(tr);
       tot = tot + col2;
     });
-
+    const tr = document.createElement("tr");
     tr.innerHTML = `
         <td>지출합계</td>
         <td>${tot}</td>
         <td></td>
-      `;
-      tbody.appendChild(tr);
+    `;
+    tbody.appendChild(tr);
     
   </script>
 </body>
