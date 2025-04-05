@@ -5,14 +5,13 @@
   <title>기본 지출 목록</title>
   <style>
     table {
-      width: 60%;
-      margin: 20px auto;
+      width: 90%;
+      margin: 10px auto;
       border-collapse: collapse;
     }
     th, td {
       border: 1px solid #aaa;
       padding: 8px;
-      text-align: center;
     }
     th {
       background-color: #eee;
@@ -40,8 +39,8 @@
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${item.col1}</td>
-        <td>${item.col2}</td>
-        <td>${item.col3}</td>
+        <td style="text-align: right;">${item.col2.toLocaleString()}</td>
+        <td style="text-align: center;">${item.col3}</td>
       `;
       tbody.appendChild(tr);
       tot = tot + item.col2;
@@ -49,7 +48,7 @@
     const tr = document.createElement("tr");
     tr.innerHTML = `
         <td>지출합계</td>
-        <td>${tot}</td>
+        <td style="text-align: right;">${tot.toLocaleString()}</td>
         <td></td>
     `;
     tbody.appendChild(tr);
