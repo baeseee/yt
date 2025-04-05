@@ -35,7 +35,7 @@
   <script src="data/test.js"></script>
   <script>
     const tbody = document.querySelector("#data-table tbody");
-
+    int tot = 0;
     data.forEach(item => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -44,7 +44,16 @@
         <td>${item.col3}</td>
       `;
       tbody.appendChild(tr);
+      tot = tot + col2;
     });
+
+    tr.innerHTML = `
+        <td>지출합계</td>
+        <td>${tot}</td>
+        <td></td>
+      `;
+      tbody.appendChild(tr);
+    
   </script>
 </body>
 </html>
