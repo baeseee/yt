@@ -105,7 +105,7 @@
         <th>제목</th>
         <th>가수</th>
         <th>발표년도</th>
-        <th>듣기</th>
+        <th>들기</th>
         <th>삭제</th>
       </tr>
     </thead>
@@ -122,7 +122,7 @@
   <div class="modal" id="modal">
     <div class="modal-content">
       <span class="modal-close" onclick="closeModal()">&times;</span>
-      <iframe id="youtubeFrame" src="" frameborder="0" allowfullscreen></iframe>
+      <iframe id="youtubeFrame" src="" frameborder="0" allow="autoplay" allowfullscreen></iframe>
     </div>
   </div>
 
@@ -188,7 +188,7 @@
             <td>${item.title}</td>
             <td>${item.artist}</td>
             <td>${item.year}</td>
-            <td><a href="#" onclick="openModal('${item.link}')">▶️ 듣기</a></td>
+            <td><a href="#" onclick="openModal('${item.link}')">▶️ 들기</a></td>
             <td><span class="delete-btn" onclick="deleteSong(${idx})">🗑️</span></td>
           `;
           tbody.appendChild(row);
@@ -241,10 +241,9 @@
     }
 
     function convertToEmbedUrl(url) {
-	  const match = url.match(/(?:youtu.be\/|v=)([\\w-]{11})/);
-	  return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1` : url;
-	}
-
+      const match = url.match(/(?:youtu.be\/|v=)([\w-]{11})/);
+      return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1` : url;
+    }
 
     window.onload = loadData;
   </script>
