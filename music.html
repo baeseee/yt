@@ -51,7 +51,8 @@
       position: relative;
       background: white;
       padding: 10px;
-      max-width: 80%;
+      width: 90%;
+      max-width: 800px;
       aspect-ratio: 16 / 9;
     }
     .modal iframe {
@@ -105,7 +106,7 @@
         <th>제목</th>
         <th>가수</th>
         <th>발표년도</th>
-        <th>들기</th>
+        <th>듣기</th>
         <th>삭제</th>
       </tr>
     </thead>
@@ -188,7 +189,7 @@
             <td>${item.title}</td>
             <td>${item.artist}</td>
             <td>${item.year}</td>
-            <td><a href="#" onclick="openModal('${item.link}')">▶️ 들기</a></td>
+            <td><a href="#" onclick="openModal('${item.link}')">▶️ 듣기</a></td>
             <td><span class="delete-btn" onclick="deleteSong(${idx})">🗑️</span></td>
           `;
           tbody.appendChild(row);
