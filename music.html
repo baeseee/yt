@@ -3,103 +3,79 @@
 <head>
   <meta charset="UTF-8" />
   <title>🎵 내가 좋아하는 노래</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       padding: 20px;
-      max-width: 800px;
-      margin: auto;
+      background-color: #f9f9f9;
     }
-
-    .form-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+    h1 {
       margin-bottom: 10px;
     }
-
-    input, select {
-      flex: 1 1 150px;
-      padding: 6px;
-    }
-
-    button {
-      padding: 6px 12px;
-    }
-
     table {
-      width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
-      overflow-x: auto;
-      display: block;
+      width: 100%;
+      margin-top: 20px;
     }
-
     th, td {
-      border: 1px solid #aaa;
+      border: 1px solid #ccc;
       padding: 8px;
       text-align: center;
-      white-space: nowrap;
     }
-
     th {
-      background-color: #f0f0f0;
+      background-color: #eee;
       cursor: pointer;
     }
-
+    .form-group {
+      margin-bottom: 10px;
+    }
+    input, select {
+      padding: 5px;
+      margin-right: 10px;
+    }
+    button {
+      padding: 5px 10px;
+      margin-right: 5px;
+    }
     .delete-btn, .edit-btn {
       cursor: pointer;
-      margin: 0 5px;
+      margin: 0 3px;
     }
-
     .modal {
       display: none;
       position: fixed;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0,0,0,0.6);
+      background-color: rgba(0, 0, 0, 0.6);
       justify-content: center;
       align-items: center;
-      z-index: 1000;
     }
-
     .modal-content {
       position: relative;
       background: white;
       width: 90%;
       max-width: 800px;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: 16/9;
     }
-
-    iframe {
+    .modal iframe {
       width: 100%;
       height: 100%;
     }
-
     .modal-close {
       position: absolute;
       top: 5px;
       right: 10px;
-      font-size: 24px;
+      font-size: 20px;
       cursor: pointer;
-    }
-
-    @media (max-width: 600px) {
-      .form-group {
-        flex-direction: column;
-      }
-      th, td {
-        font-size: 14px;
-        padding: 6px;
-      }
     }
   </style>
 </head>
 <body>
   <h1>🎶 내가 좋아하는 노래 목록</h1>
 
+  <!-- 입력 폼 -->
   <div class="form-group">
     <select id="typeInput">
       <option value="국내">국내</option>
@@ -114,6 +90,7 @@
     <button onclick="addSong()">추가</button>
   </div>
 
+  <!-- 필터 -->
   <div class="form-group">
     <label>구분:
       <select id="typeFilter" onchange="renderTable()">
@@ -129,25 +106,28 @@
     </label>
   </div>
 
+  <!-- 테이블 -->
   <table id="songTable">
     <thead>
       <tr>
         <th>구분</th>
         <th>제목</th>
         <th>가수</th>
-        <th onclick="toggleSortOrder()">발표년도 🔽</th>
+        <th onclick="toggleSort()">발표년도 ⬍</th>
         <th>듣기</th>
-        <th>수정/삭제</th>
+        <th>작업</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
-  <div style="margin-top: 10px;">
+  <!-- 백업/복원 -->
+  <div style="margin-top: 20px;">
     <button onclick="backupDataToFile()">📁 백업 저장하기</button>
-    <input type="file" accept=".json" onchange="restoreDataFromFile(event)" />
+    <input type="file" id="restoreInput" accept=".json" onchange="restoreDataFromFile(event)" />
   </div>
 
+  <!-- 모달 -->
   <div class="modal" id="modal">
     <div class="modal-content">
       <span class="modal-close" onclick="closeModal()">&times;</span>
@@ -155,12 +135,15 @@
     </div>
   </div>
 
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     let playlist = [];
-    const STORAGE_KEY = "playlist";
+    let currentIndex = null;
+    let currentSortField = null;
+    let sortAsc = true;
     let ytPlayer = null;
-    let currentIndex = -1;
-    let sortOrder = "desc";
+
+    const STORAGE_KEY = "playlist";
 
     function loadData() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -178,13 +161,16 @@
       const artist = document.getElementById("artistInput").value.trim();
       const year = parseInt(document.getElementById("yearInput").value);
       const link = document.getElementById("linkInput").value.trim();
+
       if (!title || !artist || isNaN(year) || !link) {
         alert("모든 항목을 입력해주세요.");
         return;
       }
+
       playlist.push({ type, title, artist, year, link });
       saveData();
       renderTable();
+
       document.getElementById("titleInput").value = "";
       document.getElementById("artistInput").value = "";
       document.getElementById("yearInput").value = "";
@@ -192,7 +178,7 @@
     }
 
     function deleteSong(index) {
-      if (confirm("정말 삭제할까요?")) {
+      if (confirm("이 노래를 삭제할까요?")) {
         playlist.splice(index, 1);
         saveData();
         renderTable();
@@ -201,23 +187,24 @@
 
     function editSong(index) {
       const item = playlist[index];
-      const title = prompt("노래 제목", item.title);
+      const title = prompt("제목", item.title);
       const artist = prompt("가수", item.artist);
       const year = prompt("발표년도", item.year);
-      const link = prompt("유튜브 링크", item.link);
-      if (!title || !artist || isNaN(parseInt(year)) || !link) {
-        alert("수정 취소됨.");
-        return;
+      const link = prompt("링크", item.link);
+
+      if (title && artist && !isNaN(parseInt(year)) && link) {
+        playlist[index] = {
+          ...item,
+          title: title.trim(),
+          artist: artist.trim(),
+          year: parseInt(year),
+          link: link.trim(),
+        };
+        saveData();
+        renderTable();
+      } else {
+        alert("입력값이 올바르지 않습니다.");
       }
-      playlist[index] = {
-        ...item,
-        title: title.trim(),
-        artist: artist.trim(),
-        year: parseInt(year),
-        link: link.trim()
-      };
-      saveData();
-      renderTable();
     }
 
     function renderTable() {
@@ -227,73 +214,32 @@
       const filter = document.getElementById("typeFilter").value;
       const search = document.getElementById("searchInput").value.toLowerCase();
 
-      let filtered = playlist.filter((item) => {
-        const matchType = (filter === "all" || item.type === filter);
-        const matchSearch = item.title.toLowerCase().includes(search) || item.artist.toLowerCase().includes(search);
-        return matchType && matchSearch;
-      });
+      let filtered = playlist.filter(
+        (item) =>
+          (filter === "all" || item.type === filter) &&
+          (item.title.toLowerCase().includes(search) || item.artist.toLowerCase().includes(search))
+      );
 
-      filtered.sort((a, b) => sortOrder === "asc" ? a.year - b.year : b.year - a.year);
+      if (currentSortField === 'year') {
+        filtered.sort((a, b) => sortAsc ? a.year - b.year : b.year - a.year);
+      }
 
-      filtered.forEach((item, index) => {
+      filtered.forEach((item, idx) => {
+        const realIndex = playlist.indexOf(item);
         const row = document.createElement("tr");
         row.innerHTML = `
           <td>${item.type}</td>
           <td>${item.title}</td>
           <td>${item.artist}</td>
           <td>${item.year}</td>
-          <td><a href="#" onclick="openModal(${index}); return false;">▶️ 듣기</a></td>
+          <td><a href="#" onclick="openModal('${item.link}', ${realIndex})">▶️ 듣기</a></td>
           <td>
-            <span class="edit-btn" onclick="editSong(${index})">✏️</span>
-            <span class="delete-btn" onclick="deleteSong(${index})">🗑️</span>
+            <span class="edit-btn" onclick="editSong(${realIndex})">✏️</span>
+            <span class="delete-btn" onclick="deleteSong(${realIndex})">🗑️</span>
           </td>
         `;
         tbody.appendChild(row);
       });
-    }
-
-    function toggleSortOrder() {
-      sortOrder = (sortOrder === "asc") ? "desc" : "asc";
-      renderTable();
-    }
-
-    function openModal(index) {
-      currentIndex = index;
-      const videoId = getVideoId(playlist[index].link);
-      document.getElementById("modal").style.display = "flex";
-      if (ytPlayer) {
-        ytPlayer.loadVideoById(videoId);
-      } else {
-        ytPlayer = new YT.Player("youtubeFrame", {
-          videoId,
-          playerVars: { autoplay: 1 },
-          events: {
-            'onStateChange': onPlayerStateChange
-          }
-        });
-      }
-    }
-
-    function closeModal() {
-      document.getElementById("modal").style.display = "none";
-      if (ytPlayer) ytPlayer.stopVideo();
-    }
-
-    function getVideoId(url) {
-      const match = url.match(/(?:youtu.be\/|v=)([\w-]{11})/);
-      return match ? match[1] : "";
-    }
-
-    function onPlayerStateChange(event) {
-      if (event.data === YT.PlayerState.ENDED) {
-        playNext();
-      }
-    }
-
-    function playNext() {
-      if (currentIndex >= 0 && currentIndex < playlist.length - 1) {
-        openModal(currentIndex + 1);
-      }
     }
 
     function backupDataToFile() {
@@ -308,6 +254,7 @@
     function restoreDataFromFile(event) {
       const file = event.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
@@ -327,12 +274,80 @@
       reader.readAsText(file);
     }
 
-    window.onload = loadData;
+    function toggleSort() {
+      if (currentSortField === 'year') {
+        sortAsc = !sortAsc;
+      } else {
+        currentSortField = 'year';
+        sortAsc = true;
+      }
+      renderTable();
+    }
 
-    // YouTube API 불러오기
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
+    function extractVideoId(url) {
+      const match = url.match(/(?:youtu.be\/|v=)([\w-]{11})/);
+      return match ? match[1] : null;
+    }
+
+    function openModal(link, index) {
+      currentIndex = index;
+      const videoId = extractVideoId(link);
+      if (!videoId) return alert("잘못된 링크입니다.");
+
+      document.getElementById("modal").style.display = "flex";
+      if (ytPlayer) {
+        ytPlayer.loadVideoById(videoId);
+      } else {
+        ytPlayer = new YT.Player("youtubeFrame", {
+          videoId,
+		  playerVars: {
+			autoplay: 1  // ✅ 추가된 부분
+		  },
+          events: {
+            'onStateChange': onPlayerStateChange
+          }
+        });
+      }
+    }
+
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+      if (ytPlayer) ytPlayer.stopVideo();
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.ENDED) {
+        playNext();
+      }
+    }
+
+    function playNext() {
+      const filter = document.getElementById("typeFilter").value;
+      const search = document.getElementById("searchInput").value.toLowerCase();
+
+      let filtered = playlist.filter(
+        (item) =>
+          (filter === "all" || item.type === filter) &&
+          (item.title.toLowerCase().includes(search) || item.artist.toLowerCase().includes(search))
+      );
+
+      if (currentSortField === 'year') {
+        filtered.sort((a, b) => sortAsc ? a.year - b.year : b.year - a.year);
+      }
+
+      const currentSong = playlist[currentIndex];
+      const currentFilteredIndex = filtered.findIndex(item => item === currentSong);
+
+      if (currentFilteredIndex + 1 < filtered.length) {
+        const nextSong = filtered[currentFilteredIndex + 1];
+        const nextIndex = playlist.indexOf(nextSong);
+        openModal(nextSong.link, nextIndex);
+      } else {
+        closeModal();
+      }
+    }
+
+    window.onload = loadData;
   </script>
 </body>
 </html>
