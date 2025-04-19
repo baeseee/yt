@@ -2,352 +2,236 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>🎵 내가 좋아하는 노래</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>음악 플레이리스트</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
-      background-color: #f9f9f9;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #eee;
-      cursor: pointer;
-    }
-    .form-group {
-      margin-bottom: 10px;
-    }
-    input, select {
-      padding: 5px;
-      margin-right: 10px;
-    }
-    button {
-      padding: 5px 10px;
-      margin-right: 5px;
-    }
-    .delete-btn, .edit-btn {
-      cursor: pointer;
-      margin: 0 3px;
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.6);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      position: relative;
-      background: white;
-      width: 90%;
-      max-width: 800px;
-      aspect-ratio: 16/9;
-    }
-    .modal iframe {
-      width: 100%;
-      height: 100%;
-    }
-    .modal-close {
-      position: absolute;
-      top: 5px;
-      right: 10px;
-      font-size: 20px;
-      cursor: pointer;
-    }
+    body { font-family: sans-serif; padding: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: center; }
+    th { background: #eee; }
+    input, select, button { margin: 0.25rem; padding: 0.4rem; }
+    .edit-btn, .delete-btn { cursor: pointer; margin: 0 0.25rem; }
+	button {
+	  background-color: #007bff;
+	  color: white;
+	  border: none;
+	  padding: 0.4rem 0.7rem;
+	  border-radius: 0.3rem;
+	  cursor: pointer;
+	  font-size: 0.9rem;
+	  display: inline-flex;
+	  align-items: center;
+	  gap: 0.3rem;
+	  transition: background-color 0.2s ease;
+	}
+
+	button:hover {
+	  background-color: #0056b3;
+	}
+
   </style>
 </head>
 <body>
-  <h1>🎶 내가 좋아하는 노래 목록</h1>
+  <h1>🎵 음악 플레이리스트</h1>
 
-  <!-- 입력 폼 -->
-  <div class="form-group">
+  <div>
+    <select id="typeFilter">
+      <option value="all">전체</option>
+      <option value="국내">국내</option>
+      <option value="해외">해외</option>
+	  <option value="게임">게임</option>
+      <option value="애니">애니</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="노래 제목 또는 가수 검색" />
+    <select id="sortYear">
+      <option value="default">기본</option>
+      <option value="asc">년도 오름차순</option>
+      <option value="desc">년도 내림차순</option>
+    </select>
+  </div>
+
+  <div>
     <select id="typeInput">
       <option value="국내">국내</option>
       <option value="해외">해외</option>
-      <option value="게임">게임</option>
+	  <option value="게임">게임</option>
       <option value="애니">애니</option>
     </select>
     <input type="text" id="titleInput" placeholder="노래 제목" />
     <input type="text" id="artistInput" placeholder="가수" />
-    <input type="number" id="yearInput" placeholder="발표년도" />
-    <input type="text" id="linkInput" placeholder="유튜브 링크" />
-    <button onclick="addSong()">추가</button>
+    <input type="number" id="yearInput" placeholder="년도" />
+    <input type="text" id="linkInput" placeholder="링크" />
+    <button id="addBtn">추가</button>
   </div>
 
-  <!-- 필터 -->
-  <div class="form-group">
-    <label>구분:
-      <select id="typeFilter" onchange="renderTable()">
-        <option value="all">전체</option>
-        <option value="국내">국내</option>
-        <option value="해외">해외</option>
-        <option value="게임">게임</option>
-        <option value="애니">애니</option>
-      </select>
-    </label>
-    <label>검색:
-      <input type="text" id="searchInput" placeholder="제목 또는 가수" oninput="renderTable()" />
-    </label>
-  </div>
-
-  <!-- 테이블 -->
   <table id="songTable">
     <thead>
       <tr>
-        <th>구분</th>
-        <th>제목</th>
-        <th>가수</th>
-        <th onclick="toggleSort()">발표년도 ⬍</th>
-        <th>듣기</th>
-        <th>작업</th>
+        <th>종류</th><th>제목</th><th>가수</th><th>년도</th><th>듣기</th><th>관리</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
-  <!-- 백업/복원 -->
-  <div style="margin-top: 20px;">
-    <button onclick="backupDataToFile()">📁 백업 저장하기</button>
-    <input type="file" id="restoreInput" accept=".json" onchange="restoreDataFromFile(event)" />
-  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-  <!-- 모달 -->
-  <div class="modal" id="modal">
-    <div class="modal-content">
-      <span class="modal-close" onclick="closeModal()">&times;</span>
-      <div id="youtubeFrame"></div>
-    </div>
-  </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2bmAKbE6n3h1N3AXM88MIkAEivbVfw3Q",
+      authDomain: "baeseee-b99f9.firebaseapp.com",
+      projectId: "baeseee-b99f9",
+      storageBucket: "baeseee-b99f9.appspot.com",
+      messagingSenderId: "1021781714659",
+      appId: "1:1021781714659:web:05efc791e2847c3adc07d6"
+    };
 
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <script>
-    let playlist = [];
-    let currentIndex = null;
-    let currentSortField = null;
-    let sortAsc = true;
-    let ytPlayer = null;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const songCol = collection(db, "songs");
 
-    const STORAGE_KEY = "playlist";
+    let songs = [];
+    let editId = null; // 수정 중인 곡 ID 저장
 
-    function loadData() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) playlist = JSON.parse(saved);
+    async function loadData() {
+      const querySnapshot = await getDocs(songCol);
+      songs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderTable();
     }
 
-    function saveData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(playlist));
+    function renderTable() {
+      const tbody = document.querySelector("#songTable tbody");
+      const filter = document.getElementById("typeFilter").value;
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const sort = document.getElementById("sortYear").value;
+
+      let filtered = songs.filter(song =>
+        (filter === "all" || song.type === filter) &&
+        (song.title.toLowerCase().includes(search) || song.artist.toLowerCase().includes(search))
+      );
+
+      if (sort === "asc") filtered.sort((a, b) => a.year - b.year);
+      if (sort === "desc") filtered.sort((a, b) => b.year - a.year);
+
+      tbody.innerHTML = "";
+      filtered.forEach(song => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${song.type}</td>
+          <td>${song.title}</td>
+          <td>${song.artist}</td>
+          <td>${song.year}</td>
+          <td><button onclick="openModal('${song.link}')">🎧 듣기</button></td>
+          <td>
+            <span class="edit-btn" data-id="${song.id}">✏️</span>
+            <span class="delete-btn" data-id="${song.id}">🗑️</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
-    function addSong() {
+    function fillFormForEdit(song) {
+      document.getElementById("typeInput").value = song.type;
+      document.getElementById("titleInput").value = song.title;
+      document.getElementById("artistInput").value = song.artist;
+      document.getElementById("yearInput").value = song.year;
+      document.getElementById("linkInput").value = song.link;
+      document.getElementById("addBtn").textContent = "수정 완료";
+      editId = song.id;
+    }
+
+    async function addOrUpdateSong() {
       const type = document.getElementById("typeInput").value;
       const title = document.getElementById("titleInput").value.trim();
       const artist = document.getElementById("artistInput").value.trim();
       const year = parseInt(document.getElementById("yearInput").value);
       const link = document.getElementById("linkInput").value.trim();
 
-      if (!title || !artist || isNaN(year) || !link) {
-        alert("모든 항목을 입력해주세요.");
-        return;
-      }
+      if (!title || !artist || isNaN(year) || !link) return alert("모든 항목을 입력해주세요.");
 
-      playlist.push({ type, title, artist, year, link });
-      saveData();
-      renderTable();
-
-      document.getElementById("titleInput").value = "";
-      document.getElementById("artistInput").value = "";
-      document.getElementById("yearInput").value = "";
-      document.getElementById("linkInput").value = "";
-    }
-
-    function deleteSong(index) {
-      if (confirm("이 노래를 삭제할까요?")) {
-        playlist.splice(index, 1);
-        saveData();
-        renderTable();
-      }
-    }
-
-    function editSong(index) {
-      const item = playlist[index];
-      const title = prompt("제목", item.title);
-      const artist = prompt("가수", item.artist);
-      const year = prompt("발표년도", item.year);
-      const link = prompt("링크", item.link);
-
-      if (title && artist && !isNaN(parseInt(year)) && link) {
-        playlist[index] = {
-          ...item,
-          title: title.trim(),
-          artist: artist.trim(),
-          year: parseInt(year),
-          link: link.trim(),
-        };
-        saveData();
-        renderTable();
+      if (editId) {
+        await updateDoc(doc(db, "songs", editId), { type, title, artist, year, link });
+        editId = null;
+        document.getElementById("addBtn").textContent = "추가";
       } else {
-        alert("입력값이 올바르지 않습니다.");
-      }
-    }
-
-    function renderTable() {
-      const tbody = document.querySelector("#songTable tbody");
-      tbody.innerHTML = "";
-
-      const filter = document.getElementById("typeFilter").value;
-      const search = document.getElementById("searchInput").value.toLowerCase();
-
-      let filtered = playlist.filter(
-        (item) =>
-          (filter === "all" || item.type === filter) &&
-          (item.title.toLowerCase().includes(search) || item.artist.toLowerCase().includes(search))
-      );
-
-      if (currentSortField === 'year') {
-        filtered.sort((a, b) => sortAsc ? a.year - b.year : b.year - a.year);
+        await addDoc(songCol, { type, title, artist, year, link });
       }
 
-      filtered.forEach((item, idx) => {
-        const realIndex = playlist.indexOf(item);
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${item.type}</td>
-          <td>${item.title}</td>
-          <td>${item.artist}</td>
-          <td>${item.year}</td>
-          <td><a href="#" onclick="openModal('${item.link}', ${realIndex})">▶️ 듣기</a></td>
-          <td>
-            <span class="edit-btn" onclick="editSong(${realIndex})">✏️</span>
-            <span class="delete-btn" onclick="deleteSong(${realIndex})">🗑️</span>
-          </td>
-        `;
-        tbody.appendChild(row);
+      ["titleInput", "artistInput", "yearInput", "linkInput"].forEach(id => {
+        document.getElementById(id).value = "";
       });
+
+      loadData();
     }
 
-    function backupDataToFile() {
-      const blob = new Blob([JSON.stringify(playlist, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "my_playlist_backup.json";
-      a.click();
+    async function editSong(id) {
+      const song = songs.find(s => s.id === id);
+      fillFormForEdit(song);
     }
 
-    function restoreDataFromFile(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (Array.isArray(imported)) {
-            playlist = imported;
-            saveData();
-            renderTable();
-            alert("복원 완료!");
-          } else {
-            alert("잘못된 파일 형식입니다.");
-          }
-        } catch {
-          alert("복원 실패");
-        }
-      };
-      reader.readAsText(file);
+    async function deleteSong(id) {
+      if (!confirm("삭제하시겠습니까?")) return;
+      await deleteDoc(doc(db, "songs", id));
+      loadData();
     }
 
-    function toggleSort() {
-      if (currentSortField === 'year') {
-        sortAsc = !sortAsc;
-      } else {
-        currentSortField = 'year';
-        sortAsc = true;
-      }
-      renderTable();
-    }
+    document.getElementById("addBtn").addEventListener("click", addOrUpdateSong);
+    document.getElementById("typeFilter").addEventListener("change", renderTable);
+    document.getElementById("searchInput").addEventListener("input", renderTable);
+    document.getElementById("sortYear").addEventListener("change", renderTable);
 
-    function extractVideoId(url) {
-      const match = url.match(/(?:youtu.be\/|v=)([\w-]{11})/);
-      return match ? match[1] : null;
-    }
-
-    function openModal(link, index) {
-      currentIndex = index;
-      const videoId = extractVideoId(link);
-      if (!videoId) return alert("잘못된 링크입니다.");
-
-      document.getElementById("modal").style.display = "flex";
-      if (ytPlayer) {
-        ytPlayer.loadVideoById(videoId);
-      } else {
-        ytPlayer = new YT.Player("youtubeFrame", {
-          videoId,
-		  playerVars: {
-			autoplay: 1  // ✅ 추가된 부분
-		  },
-          events: {
-            'onStateChange': onPlayerStateChange
-          }
-        });
-      }
-    }
-
-    function closeModal() {
-      document.getElementById("modal").style.display = "none";
-      if (ytPlayer) ytPlayer.stopVideo();
-    }
-
-    function onPlayerStateChange(event) {
-      if (event.data === YT.PlayerState.ENDED) {
-        playNext();
-      }
-    }
-
-    function playNext() {
-      const filter = document.getElementById("typeFilter").value;
-      const search = document.getElementById("searchInput").value.toLowerCase();
-
-      let filtered = playlist.filter(
-        (item) =>
-          (filter === "all" || item.type === filter) &&
-          (item.title.toLowerCase().includes(search) || item.artist.toLowerCase().includes(search))
-      );
-
-      if (currentSortField === 'year') {
-        filtered.sort((a, b) => sortAsc ? a.year - b.year : b.year - a.year);
-      }
-
-      const currentSong = playlist[currentIndex];
-      const currentFilteredIndex = filtered.findIndex(item => item === currentSong);
-
-      if (currentFilteredIndex + 1 < filtered.length) {
-        const nextSong = filtered[currentFilteredIndex + 1];
-        const nextIndex = playlist.indexOf(nextSong);
-        openModal(nextSong.link, nextIndex);
-      } else {
-        closeModal();
-      }
-    }
+    document.querySelector("#songTable tbody").addEventListener("click", (e) => {
+      const id = e.target.dataset.id;
+      if (e.target.classList.contains("edit-btn")) editSong(id);
+      if (e.target.classList.contains("delete-btn")) deleteSong(id);
+    });
 
     window.onload = loadData;
+	
+	window.openModal = function(link) {
+	  const modal = document.getElementById("youtubeModal");
+	  const backdrop = document.getElementById("modalBackdrop");
+	  const iframe = document.getElementById("youtubeFrame");
+
+	  // 유튜브 링크에서 ID 추출
+	  const videoIdMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+	  if (videoIdMatch) {
+		const videoId = videoIdMatch[1];
+		// autoplay 파라미터 포함
+		iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+		modal.style.display = "block";
+		backdrop.style.display = "block";
+	  } else {
+		alert("유효한 유튜브 링크가 아닙니다.");
+	  }
+	};
+
+
+	window.closeModal = function() {
+	  document.getElementById("youtubeModal").style.display = "none";
+	  document.getElementById("modalBackdrop").style.display = "none";
+	  document.getElementById("youtubeFrame").src = "";
+	};
+
+
   </script>
+
+	<!-- 유튜브 모달 -->
+	<div id="youtubeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+	  background:#fff; padding:1rem; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000; width:90%; max-width:950px;">
+	  <div style="text-align:right;">
+		<button onclick="closeModal()">닫기</button>
+	  </div>
+	  <div id="youtubeContainer" style="position:relative; padding-top:56.25%;">
+		<iframe id="youtubeFrame" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0"
+		  allowfullscreen allow="autoplay; encrypted-media"></iframe>
+	  </div>
+	</div>
+
+	<!-- 모달 외부 클릭 시 닫기 -->
+	<div id="modalBackdrop" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh;
+	  background:rgba(0,0,0,0.5); z-index:999;" onclick="closeModal()"></div>
+
 </body>
 </html>
