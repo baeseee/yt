@@ -11,24 +11,77 @@
     th { background: #eee; }
     input, select, button { margin: 0.25rem; padding: 0.3rem; }
     .edit-btn, .delete-btn { cursor: pointer; margin: 0 0.15rem; }
-	button {
-	  background-color: #007bff;
-	  color: white;
-	  border: none;
-	  padding: 0.4rem 0.7rem;
-	  border-radius: 0.3rem;
-	  cursor: pointer;
-	  font-size: 0.9rem;
-	  display: inline-flex;
-	  align-items: center;
-	  gap: 0.3rem;
-	  transition: background-color 0.2s ease;
-	}
 
-	button:hover {
-	  background-color: #0056b3;
-	}
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.7rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background-color 0.2s ease;
+    }
 
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* 유튜브 모달 최소 padding */
+    #youtubeModal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #000;
+      z-index: 1000;
+      width: 90%;
+      max-width: 950px;
+      aspect-ratio: 16 / 9;
+    }
+
+    #youtubeContainer {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    #youtubeContainer iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    #modalBackdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+
+    #modalClose {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      z-index: 1001;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border: none;
+      font-size: 1rem;
+      padding: 0.2rem 0.5rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -39,7 +92,7 @@
       <option value="all">전체</option>
       <option value="국내">국내</option>
       <option value="해외">해외</option>
-	  <option value="게임">게임</option>
+      <option value="게임">게임</option>
       <option value="애니">애니</option>
     </select>
     <input type="text" id="searchInput" placeholder="노래 제목 또는 가수 검색" />
@@ -54,7 +107,7 @@
     <select id="typeInput">
       <option value="국내">국내</option>
       <option value="해외">해외</option>
-	  <option value="게임">게임</option>
+      <option value="게임">게임</option>
       <option value="애니">애니</option>
     </select>
     <input type="text" id="titleInput" placeholder="노래 제목" />
@@ -73,9 +126,21 @@
     <tbody></tbody>
   </table>
 
+  <!-- 유튜브 모달 -->
+  <div id="youtubeModal">
+    <button id="modalClose" onclick="closeModal()">닫기</button>
+    <div id="youtubeContainer">
+      <div id="player"></div>
+    </div>
+  </div>
+  <div id="modalBackdrop" onclick="closeModal()"></div>
+
+  <!-- 유튜브 IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD2bmAKbE6n3h1N3AXM88MIkAEivbVfw3Q",
@@ -91,17 +156,14 @@
     const songCol = collection(db, "songs");
 
     let songs = [];
-    let editId = null; // 수정 중인 곡 ID 저장
+    let editId = null;
 
-    import { query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
-
-	async function loadData() {
-	  const q = query(songCol, orderBy("createdAt", "asc")); // 오름차순 (입력 순)
-	  const querySnapshot = await getDocs(q);
-	  songs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-	  renderTable();
-	}
-
+    async function loadData() {
+      const q = query(songCol, orderBy("createdAt", "asc"));
+      const querySnapshot = await getDocs(q);
+      songs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderTable();
+    }
 
     function renderTable() {
       const tbody = document.querySelector("#songTable tbody");
@@ -118,11 +180,11 @@
       if (sort === "desc") filtered.sort((a, b) => b.year - a.year);
 
       tbody.innerHTML = "";
-      filtered.forEach(song => {
+      filtered.forEach((song, index) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${song.type}</td>
-          <td><a href="#" onclick="openModal('${song.link}')">${song.title}</a></td>
+          <td><a href="#" onclick="openModal('${song.link}', ${index})">${song.title}</a></td>
           <td>${song.artist}</td>
           <td>${song.year}</td>
           <td>
@@ -191,50 +253,68 @@
     });
 
     window.onload = loadData;
-	
-	window.openModal = function(link) {
-	  const modal = document.getElementById("youtubeModal");
-	  const backdrop = document.getElementById("modalBackdrop");
-	  const iframe = document.getElementById("youtubeFrame");
-
-	  // 유튜브 링크에서 ID 추출
-	  const videoIdMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
-	  if (videoIdMatch) {
-		const videoId = videoIdMatch[1];
-		// autoplay 파라미터 포함
-		iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
-		modal.style.display = "block";
-		backdrop.style.display = "block";
-	  } else {
-		alert("유효한 유튜브 링크가 아닙니다.");
-	  }
-	};
-
-
-	window.closeModal = function() {
-	  document.getElementById("youtubeModal").style.display = "none";
-	  document.getElementById("modalBackdrop").style.display = "none";
-	  document.getElementById("youtubeFrame").src = "";
-	};
-
-
   </script>
 
-	<!-- 유튜브 모달 -->
-	<div id="youtubeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
-	  background:#fff; padding:1rem; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000; width:90%; max-width:950px;">
-	  <div style="text-align:right;">
-		<button onclick="closeModal()">닫기</button>
-	  </div>
-	  <div id="youtubeContainer" style="position:relative; padding-top:56.25%;">
-		<iframe id="youtubeFrame" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0"
-		  allowfullscreen allow="autoplay; encrypted-media"></iframe>
-	  </div>
-	</div>
+  <script>
+    let player;
+    let playerReady = false;
+    let currentIndex = 0;
 
-	<!-- 모달 외부 클릭 시 닫기 -->
-	<div id="modalBackdrop" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh;
-	  background:rgba(0,0,0,0.5); z-index:999;" onclick="closeModal()"></div>
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player("player", {
+        height: "100%",
+        width: "100%",
+        videoId: "",
+        playerVars: {
+          autoplay: 1,
+          rel: 0
+        },
+        events: {
+          onReady: () => {
+            playerReady = true;
+          },
+          onStateChange: onPlayerStateChange
+        }
+      });
+    };
 
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.ENDED) {
+        const nextRow = currentIndex + 1;
+        const table = document.querySelectorAll("#songTable tbody tr");
+        if (table[nextRow]) {
+          const linkElement = table[nextRow].querySelector("a");
+          if (linkElement) linkElement.click();
+        }
+      }
+    }
+
+    window.openModal = function (link, index) {
+      currentIndex = index;
+
+      const match = link.match(/(?:v=|\.be\/)([\w-]+)/);
+      if (!match) return alert("유효한 유튜브 링크가 아닙니다.");
+      const videoId = match[1];
+
+      document.getElementById("youtubeModal").style.display = "block";
+      document.getElementById("modalBackdrop").style.display = "block";
+
+      const tryPlayVideo = () => {
+        if (playerReady) {
+          player.loadVideoById(videoId);
+        } else {
+          setTimeout(tryPlayVideo, 100);
+        }
+      };
+
+      tryPlayVideo();
+    };
+
+    window.closeModal = function () {
+      document.getElementById("youtubeModal").style.display = "none";
+      document.getElementById("modalBackdrop").style.display = "none";
+      if (playerReady) player.stopVideo();
+    };
+  </script>
 </body>
 </html>
