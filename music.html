@@ -7,10 +7,10 @@
   <style>
     body { font-family: sans-serif; padding: 1rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: center; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
     th { background: #eee; }
-    input, select, button { margin: 0.25rem; padding: 0.4rem; }
-    .edit-btn, .delete-btn { cursor: pointer; margin: 0 0.25rem; }
+    input, select, button { margin: 0.25rem; padding: 0.3rem; }
+    .edit-btn, .delete-btn { cursor: pointer; margin: 0 0.15rem; }
 	button {
 	  background-color: #007bff;
 	  color: white;
@@ -67,7 +67,7 @@
   <table id="songTable">
     <thead>
       <tr>
-        <th>종류</th><th>제목</th><th>가수</th><th>년도</th><th>듣기</th><th>관리</th>
+        <th width="60px">종류</th><th>제목</th><th>가수</th><th width="100px">년도</th><th width="70px">관리</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -93,11 +93,15 @@
     let songs = [];
     let editId = null; // 수정 중인 곡 ID 저장
 
-    async function loadData() {
-      const querySnapshot = await getDocs(songCol);
-      songs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderTable();
-    }
+    import { query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+	async function loadData() {
+	  const q = query(songCol, orderBy("createdAt", "asc")); // 오름차순 (입력 순)
+	  const querySnapshot = await getDocs(q);
+	  songs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+	  renderTable();
+	}
+
 
     function renderTable() {
       const tbody = document.querySelector("#songTable tbody");
@@ -118,10 +122,9 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${song.type}</td>
-          <td>${song.title}</td>
+          <td><a href="#" onclick="openModal('${song.link}')">${song.title}</a></td>
           <td>${song.artist}</td>
           <td>${song.year}</td>
-          <td><button onclick="openModal('${song.link}')">🎧 듣기</button></td>
           <td>
             <span class="edit-btn" data-id="${song.id}">✏️</span>
             <span class="delete-btn" data-id="${song.id}">🗑️</span>
@@ -151,11 +154,11 @@
       if (!title || !artist || isNaN(year) || !link) return alert("모든 항목을 입력해주세요.");
 
       if (editId) {
-        await updateDoc(doc(db, "songs", editId), { type, title, artist, year, link });
+        await updateDoc(doc(db, "songs", editId), { type, title, artist, year, link, createdAt: new Date() });
         editId = null;
         document.getElementById("addBtn").textContent = "추가";
       } else {
-        await addDoc(songCol, { type, title, artist, year, link });
+        await addDoc(songCol, { type, title, artist, year, link, createdAt: new Date() });
       }
 
       ["titleInput", "artistInput", "yearInput", "linkInput"].forEach(id => {
