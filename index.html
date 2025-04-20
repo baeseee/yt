@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Web Apps</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+      background: #f2f2f2;
+    }
+    h1 {
+      margin-bottom: 1.5rem;
+    }
+    .app-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .app-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .app-card:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <h1>내 웹 프로그램 모음</h1>
+  <div class="app-list">
+    <div class="app-card" onclick="location.href='expense.html'">
+      💰 생활비 기입장
+    </div>
+    <div class="app-card" onclick="location.href='music.html'">
+      🎵 음악 플레이리스트
+    </div>
+    <!-- 필요한 만큼 추가 -->
+    <div class="app-card" onclick="location.href='mv.html'">
+      🎦 뮤직비디오
+    </div>
+  </div>
+</body>
+</html>
