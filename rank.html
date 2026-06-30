@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>콘텐츠 리스트</title>
+    <style>
+        /* 기본 스타일 및 변수 설정 (다크모드 지원) */
+        :root {
+            --bg-color: #f8f9fa;
+            --container-bg: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --primary-color: #4f46e5;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border-color: #333333;
+            --primary-color: #6366f1;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* 헤더 영역 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* 컨트롤러 영역 */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        select {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        /* 테이블 스타일 */
+        .table-container {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            max-height: 550px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--container-bg);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            box-shadow: inset 0 -1px 0 var(--border-color);
+        }
+
+        th, td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        [data-theme="dark"] tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* [변경점] 클릭 가능한 제목 스타일 */
+        .clickable-title {
+            font-weight: 500;
+            color: var(--primary-color);
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .clickable-title:hover {
+            opacity: 0.8;
+        }
+
+        .rating {
+            color: #ffb000;
+            font-weight: bold;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        /* [변경점] 이미지 팝업(모달) 스타일 */
+        .modal {
+            display: none;             /* 기본은 숨김 상태 */
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* 배경을 어둡게 */
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: var(--container-bg);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 80%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 60vh;
+            border-radius: 6px;
+            display: block;
+            margin: 0 auto 15px auto;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: -40px; right: 0;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>🎬 콘텐츠 리스트</h2>
+        <button class="theme-toggle" onclick="toggleTheme()">🌓 모드 변경</button>
+    </div>
+
+    <div class="controls">
+        <input type="text" id="search-bar" class="search-input" placeholder="🔍 제목 또는 주연 검색..." oninput="renderTable()">
+        
+        <select id="filter-type" onchange="renderTable()">
+            <option value="전체">모든 구분</option>
+            <option value="드라마">드라마</option>
+            <option value="영화">영화</option>
+            <option value="애니">애니</option>
+        </select>
+
+        <select id="sort-by" onchange="renderTable()">
+            <option value="latest">최신 출시순</option>
+            <option value="oldest">오래된 출시순</option>
+            <option value="rating-high">평점 높은순</option>
+            <option value="rating-low">평점 낮은순</option>
+            <option value="title-asc">제목 가나다순</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>제목</th>
+                    <th>구분</th>
+                    <th>주연</th>
+                    <th>평점</th>
+                    <th>출시연도</th>
+                </tr>
+            </thead>
+            <tbody id="data-list">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="image-modal" class="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <img id="modal-img" src="" alt="콘텐츠 이미지">
+        <div id="modal-title" class="modal-title"></div>
+    </div>
+</div>
+
+<script>
+    // [변경점] 데이터 객체 안에 각각의 이미지 주소(img) 속성을 추가했습니다.
+    // 예시용으로 주신 주소를 기본값으로 세팅해 두었습니다. 나중에 작품별 이미지 주소로 바꾸시면 됩니다.
+    const datas = [
+        { title: "협상의 기술", type: "드라마", actor: "이제훈", rating: "3", year: "2025", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAgXBxY7tHjG8p48f_ZUfcpRyma_j3edJpo1H-vwHVvQ&s=10" },
+        { title: "기생충", type: "영화", actor: "송강호", rating: "5", year: "2019", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAgXBxY7tHjG8p48f_ZUfcpRyma_j3edJpo1H-vwHVvQ&s=10" },
+        { title: "모범택시", type: "드라마", actor: "이제훈", rating: "4", year: "2023", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAgXBxY7tHjG8p48f_ZUfcpRyma_j3edJpo1H-vwHVvQ&s=10" },
+        { title: "바람의 검심", type: "애니", actor: "", rating: "5", year: "2024", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAgXBxY7tHjG8p48f_ZUfcpRyma_j3edJpo1H-vwHVvQ&s=10" }
+    ];
+
+    // 테이블 렌더링 함수
+    function renderTable() {
+        const tableBody = document.getElementById("data-list");
+        const searchQuery = document.getElementById("search-bar").value.toLowerCase();
+        const filterType = document.getElementById("filter-type").value;
+        const sortBy = document.getElementById("sort-by").value;
+
+        let filteredData = datas.filter(item => {
+            const matchesSearch = item.title.toLowerCase().includes(searchQuery) || 
+                                  item.actor.toLowerCase().includes(searchQuery);
+            const matchesFilter = (filterType === "전체") || (item.type === filterType);
+            return matchesSearch && matchesFilter;
+        });
+
+        filteredData.sort((a, b) => {
+            if (sortBy === "latest") return b.year - a.year;
+            if (sortBy === "oldest") return a.year - b.year;
+            if (sortBy === "rating-high") return b.rating - a.rating;
+            if (sortBy === "rating-low") return a.rating - b.rating;
+            if (sortBy === "title-asc") return a.title.localeCompare(b.title, 'ko');
+            return 0;
+        });
+
+        tableBody.innerHTML = "";
+
+        if (filteredData.length === 0) {
+            tableBody
